@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button, Form, Input, List, Space } from 'antd';
 import './App.css';
-import Map from './components/Map';
 import { calculateOptimalRoute } from './service/MapService';
+import Map from './components/map';
 
 const defaultCenter = {
   label: 'Inicio default',
@@ -11,7 +11,7 @@ const defaultCenter = {
 
 function App() {
   const [currentPosition, setCurrentPosition] = useState(null);
-  const [polyline, setPolyline] = useState(null);
+  const [polylineInfo, setPolylineInfo] = useState({});
   const [points, setPoints] = useState([
     { label: 'Marker1', position: { lat: -31.236840, lng: -64.322312 } },
     { label: 'Marker2', position: { lat: -31.241317, lng: -64.301455 } },
@@ -42,7 +42,7 @@ function App() {
     if (!currentPosition) return;
 
     calculateOptimalRoute(currentPosition, points)
-      .then(({ polyline }) => setPolyline(polyline));
+      .then((info) => setPolylineInfo(info));
   }, [currentPosition, points]);
 
   const handleMarkerDrag = (index, newPosition) => {
@@ -104,7 +104,7 @@ function App() {
         <Map
           position={currentPosition}
           markers={[currentPosition, ...points]}
-          polyline={polyline}
+          polylineInfo={polylineInfo}
           onMarkerDrag={(index, newPos) => handleMarkerDrag(index - 1, newPos)} // -1 porque el primero es currentPosition
         />
       </div>

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export async function calculateOptimalRoute(currentLocation, deliveryPoints) {
+  // {label: '', position {lng,lat}};
   const points = [currentLocation, ...deliveryPoints];
 
   function calculateDistance(posA, posB) {
@@ -47,17 +48,54 @@ export async function calculateOptimalRoute(currentLocation, deliveryPoints) {
     return ordered;
   }
 
-  const route = nearestNeighborRoute(points);
-  const finalRoute = [...route, route[0]];
+  function generateGoogleMapsURL(points) {
 
-  let polyline = finalRoute.map(p => [p.position.lat, p.position.lng]);
+    if (!Array.isArray(points) || points.length < 2) return null;
+    const cupPoints = points.slice(0, 10); //limitamos a 10 puntos para crear la ruta por tramos.
+    const origen = cupPoints[0];
+    const destino = cupPoints[cupPoints.length - 1];
+
+    if (!origen || !destino) return null;
+
+    const waypoints = cupPoints
+      .slice(1, -1)
+      .map(p => `${p.position.lat},${p.position.lng}`)
+      .join("|");
+
+    const originStr = `${origen.position.lat},${origen.position.lng}`;
+    const destinationStr = `${destino.position.lat},${destino.position.lng}`;
+
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destinationStr}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ''}&travelmode=driving`;
+
+    return url;
+  }
+
+  const routePoints = nearestNeighborRoute(points);
+  const route = [
+    ...routePoints,
+    // route[0]
+  ];
+
+  const urlGoogleMaps = generateGoogleMapsURL(route);
+  let polylines = [{ distance: 0, polyline: route.map(p => [p.position.lat, p.position.lng]) }];
 
   try {
-    const url = `http://localhost:8989/route?point=${finalRoute.map(p => `${p.position.lat},${p.position.lng}`).join('&point=')}&profile=car&points_encoded=false&instructions=false&elevation=false`;
+    const url = `http://localhost:8989/route?point=${route.map(p => `${p.position.lat},${p.position.lng}`).join('&point=')}&profile=car&points_encoded=false&instructions=false&elevation=false`;
     const { data } = await axios.get(url);
-    polyline = data.paths[0].points.coordinates.map((c, i) => [c[1], c[0]]);
+    polylines = data.paths.map(p => {
+      const polyline = p.points.coordinates.map(c => [c[1], c[0]]);
+      return {
+        polyline,
+        distance: (p.distance / 1000).toFixed(2),
+        time: p.time
+      }
+    });
   } catch (error) {
     console.log('error on get polyline: ---------------------', error);
   }
-  return { route: finalRoute, polyline };
+  return {
+    route,
+    polylines,
+    urlGoogleMaps,
+  };
 }

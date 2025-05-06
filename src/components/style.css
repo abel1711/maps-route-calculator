@@ -1,0 +1,12 @@
+.info-polyline {
+  position: absolute;
+  z-index: 999;
+  bottom: 0;
+
+  button {
+    margin-bottom: 0;
+    font-size: 10px;
+    height: 30px;
+    line-height: 30px
+  }
+}
